@@ -13,6 +13,10 @@ You can install the package via composer:
 composer require modstore/cronski-laravel
 ```
 
+```bash
+php artisan vendor:publish --provider="Modstore\Cronski\CronskiServiceProvider"
+```
+
 ## Usage
 
 ``` php

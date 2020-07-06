@@ -12,6 +12,13 @@ return [
 
     'commands' => [
         'enabled' => true, // Can be false, then will only log command implementing the interface.
-        'excluded' => [], // If enabled is true, a list of excluded commands can be added.
+        // Eg. app:my-command, app:*.
+        // You can use either "excluded" or "included" not both.
+        'excluded' => [
+            // List of commands to be excluded. All other commands will be included.
+        ],
+        'included' => [
+            // List of command to be included. All other commands will be excluded.
+        ],
     ],
 ];

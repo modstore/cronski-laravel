@@ -21,6 +21,16 @@ class Cronski
         $this->token = $token;
     }
 
+    /**
+     * Whether Cronski is enabled.
+     *
+     * @return bool
+     */
+    public function isEnabled()
+    {
+        return $this->projectUuid !== null;
+    }
+
     public function start($data = [])
     {
         $data = array_replace_recursive([
@@ -42,6 +52,8 @@ class Cronski
         $data = array_replace_recursive([
             // Send through the start time so there's no delay due to request time.
             'finished_at' => Carbon::now()->toIso8601ZuluString(),
+            // Send through the memory usage in mb.
+            'memory' => memory_get_usage(true) / 1024 / 1024,
         ], $data);
 
         $response = $this->request(
@@ -58,6 +70,8 @@ class Cronski
         $data = array_replace_recursive([
             // Send through the start time so there's no delay due to request time.
             'finished_at' => Carbon::now()->toIso8601ZuluString(),
+            // Send through the memory usage in mb.
+            'memory' => memory_get_usage(true) / 1024 / 1024,
         ], $data);
 
         return $this->request('POST', sprintf('api/project/%s/process/fail', $this->projectUuid), $data);
