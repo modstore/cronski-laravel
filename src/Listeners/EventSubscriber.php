@@ -14,7 +14,7 @@ class EventSubscriber
 {
     protected $cronski;
 
-    protected static $processUuid;
+    protected static $processUuids = [];
 
     public function __construct(Cronski $cronski)
     {
@@ -66,7 +66,9 @@ class EventSubscriber
             return;
         }
 
-        self::$processUuid = $this->cronski->start([
+        $lookupKey = $this->getCommandKey((string) $event->input);
+
+        self::$processUuids[$lookupKey] = $this->cronski->start([
             'key' => $event->command,
             'type' => Cronski::TYPE_COMMAND,
             'start_data' => [
@@ -81,7 +83,10 @@ class EventSubscriber
             return;
         }
 
-        $this->cronski->finish(self::$processUuid);
+        $lookupKey = $this->getCommandKey((string) $event->input);
+
+        $this->cronski->finish(self::$processUuids[$lookupKey]);
+        unset(self::$processUuids[$lookupKey]);
     }
 
     /**
@@ -130,11 +135,13 @@ class EventSubscriber
         }
 
         $resolvedJob = unserialize($event->job->payload()['data']['command']);
+        $lookupKey = $this->getJobKey($resolvedJob);
 
-        self::$processUuid = $this->cronski->start([
+        self::$processUuids[$lookupKey] = $this->cronski->start([
             'key' => $event->job->resolveName(),
             'type' => Cronski::TYPE_JOB,
             'start_data' => (array) $resolvedJob,
+            'tags' => $resolvedJob->tags(),
         ]);
     }
 
@@ -144,7 +151,11 @@ class EventSubscriber
             return;
         }
 
-        $this->cronski->finish(self::$processUuid);
+        $resolvedJob = unserialize($event->job->payload()['data']['command']);
+        $lookupKey = $this->getJobKey($resolvedJob);
+
+        $this->cronski->finish(self::$processUuids[$lookupKey]);
+        unset(self::$processUuids[$lookupKey]);
     }
 
     public function handleJobFailed(JobFailed $event)
@@ -153,6 +164,32 @@ class EventSubscriber
             return;
         }
 
-        $this->cronski->fail(self::$processUuid, $event->exception->getMessage());
+        $resolvedJob = unserialize($event->job->payload()['data']['command']);
+        $lookupKey = $this->getJobKey($resolvedJob);
+
+        $this->cronski->fail(self::$processUuids[$lookupKey], $event->exception->getMessage());
+        unset(self::$processUuids[$lookupKey]);
+    }
+
+    /**
+     * Get a key for storing a reference to this command instance locally.
+     *
+     * @param string $input
+     * @return string
+     */
+    protected function getCommandKey(string $input)
+    {
+        return md5($input);
+    }
+
+    /**
+     * Get a key for storing a reference to this job instance locally.
+     *
+     * @param $job
+     * @return string
+     */
+    protected function getJobKey($job)
+    {
+        return md5(json_encode((array) $job));
     }
 }
