@@ -16,6 +16,26 @@ class EventSubscriberTest extends TestCase
     public function shouldHandleDataProvider()
     {
         return [
+            'Included job, wildcard match' => [
+                'config' => [ // The "jobs" config.
+                    'excluded' => [],
+                    'included' => [
+                        'App\Jobs\*',
+                    ],
+                ],
+                'command' => 'App\Jobs\MyJob',
+                'expectedResult' => true,
+            ],
+            'Included job, exact match' => [
+                'config' => [ // The "jobs" config.
+                    'excluded' => [],
+                    'included' => [
+                        'App\Jobs\MyJob',
+                    ],
+                ],
+                'command' => 'App\Jobs\MyJob',
+                'expectedResult' => true,
+            ],
             'Included, wildcard no match' => [
                 'config' => [ // The "commands" config.
                     'excluded' => [],

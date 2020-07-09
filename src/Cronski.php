@@ -8,6 +8,9 @@ use Illuminate\Support\Arr;
 
 class Cronski
 {
+    const TYPE_COMMAND = 0;
+    const TYPE_JOB = 1;
+
     protected $client;
 
     protected $projectUuid;
@@ -65,16 +68,23 @@ class Cronski
         return Arr::get(json_decode($response->getBody()->getContents(), true), 'data.uuid');
     }
 
-    public function fail($data = [])
+    public function fail($processUuid, $message = null, $data = [])
     {
         $data = array_replace_recursive([
             // Send through the start time so there's no delay due to request time.
             'finished_at' => Carbon::now()->toIso8601ZuluString(),
             // Send through the memory usage in mb.
             'memory' => memory_get_usage(true) / 1024 / 1024,
+            'failed_message' => $message,
         ], $data);
 
-        return $this->request('POST', sprintf('api/project/%s/process/fail', $this->projectUuid), $data);
+        $response = $this->request(
+            'POST',
+            sprintf('api/project/%s/process/%s/fail', $this->projectUuid, $processUuid),
+            $data
+        );
+
+        return Arr::get(json_decode($response->getBody()->getContents(), true), 'data.uuid');
     }
 
     protected function request(string $method, string $url, array $data)
