@@ -4,6 +4,7 @@ namespace Modstore\Cronski;
 
 use Illuminate\Support\ServiceProvider;
 use GuzzleHttp\Client;
+use Modstore\Cronski\Console\Commands\SendPendingRequestsCommand;
 use Modstore\Cronski\Providers\EventServiceProvider;
 
 class CronskiServiceProvider extends ServiceProvider
@@ -13,10 +14,18 @@ class CronskiServiceProvider extends ServiceProvider
      */
     public function boot()
     {
+        if (config('cronski.scheduled')) {
+            $this->loadMigrationsFrom(__DIR__.'/../database/migrations');
+        }
+
         if ($this->app->runningInConsole()) {
             $this->publishes([
                 __DIR__.'/../config/config.php' => config_path('cronski.php'),
             ], 'config');
+
+            $this->commands([
+                SendPendingRequestsCommand::class,
+            ]);
         }
     }
 
@@ -39,7 +48,12 @@ class CronskiServiceProvider extends ServiceProvider
                 'base_uri' => config('cronski.url'),
             ]));
 
-            return new Cronski($client, config('cronski.project'), config('cronski.token'));
+            return new Cronski(
+                $client,
+                config('cronski.project'),
+                config('cronski.token'),
+                config('cronski.scheduled')
+            );
         });
     }
 }

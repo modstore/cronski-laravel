@@ -17,11 +17,14 @@ class Cronski
 
     protected $token;
 
-    public function __construct(ClientInterface $client, $projectUuid, $token)
+    protected $scheduled;
+
+    public function __construct(ClientInterface $client, $projectUuid, $token, bool $scheduled = false)
     {
         $this->client = $client;
         $this->projectUuid = $projectUuid;
         $this->token = $token;
+        $this->scheduled = $scheduled;
     }
 
     /**
@@ -34,6 +37,21 @@ class Cronski
         return $this->projectUuid !== null;
     }
 
+    /**
+     * The api endpoint base path for the configured project.
+     *
+     * @return string
+     */
+    protected function getBasePath()
+    {
+        return sprintf('api/project/%s/', $this->projectUuid);
+    }
+
+    /**
+     * @param array $data
+     * @return string|int - Either the UUID of the new process, or the id of the local row if scheduled.
+     * @throws \GuzzleHttp\Exception\GuzzleException
+     */
     public function start($data = [])
     {
         $data = array_replace_recursive([
@@ -41,16 +59,26 @@ class Cronski
             'started_at' => Carbon::now()->toIso8601ZuluString(),
         ], $data);
 
-        $response = $this->request(
-            'POST',
-            sprintf('api/project/%s/process/start', $this->projectUuid),
-            $data
-        );
+        // If scheduled, create the record locally only, don't send a request now.
+        if ($this->scheduled) {
+            $process = Process::create([
+                'endpoint' => Process::ENDPOINT_START,
+                'data' => $data,
+            ]);
 
-        return Arr::get(json_decode($response->getBody()->getContents(), true), 'data.uuid');
+            return $process->id;
+        }
+
+        return Arr::get($this->request('POST', 'process/start', $data), 'uuid');
     }
 
-    public function finish($processUuid, $data = [])
+    /**
+     * @param $processId - Process UUID if not scheduled, or local process id if scheduled.
+     * @param array $data
+     * @return string|int - Either the UUID of the process, or the id of the local row if scheduled.
+     * @throws \GuzzleHttp\Exception\GuzzleException
+     */
+    public function finish($processId, $data = [])
     {
         $data = array_replace_recursive([
             // Send through the start time so there's no delay due to request time.
@@ -59,16 +87,28 @@ class Cronski
             'memory' => memory_get_usage(true) / 1024 / 1024,
         ], $data);
 
-        $response = $this->request(
-            'POST',
-            sprintf('api/project/%s/process/%s/finish', $this->projectUuid, $processUuid),
-            $data
-        );
+        // If scheduled, create the record locally only, don't send a request now.
+        if ($this->scheduled) {
+            $process = Process::create([
+                'endpoint' => Process::ENDPOINT_FINISH,
+                'data' => $data,
+                'parent_id' => $processId,
+            ]);
 
-        return Arr::get(json_decode($response->getBody()->getContents(), true), 'data.uuid');
+            return $process->id;
+        }
+
+        return Arr::get($this->request('POST', sprintf('process/%s/finish', $processId), $data), 'uuid');
     }
 
-    public function fail($processUuid, $message = null, $data = [])
+    /**
+     * @param $processId - Process UUID if not scheduled, or local process id if scheduled.
+     * @param null $message
+     * @param array $data
+     * @return string|int - Either the UUID of the new process, or the id of the local row if scheduled.
+     * @throws \GuzzleHttp\Exception\GuzzleException
+     */
+    public function fail($processId, $message = null, $data = [])
     {
         $data = array_replace_recursive([
             // Send through the start time so there's no delay due to request time.
@@ -78,23 +118,37 @@ class Cronski
             'failed_message' => $message,
         ], $data);
 
-        $response = $this->request(
-            'POST',
-            sprintf('api/project/%s/process/%s/fail', $this->projectUuid, $processUuid),
-            $data
-        );
+        // If scheduled, create the record locally only, don't send a request now.
+        if ($this->scheduled) {
+            $process = Process::create([
+                'endpoint' => Process::ENDPOINT_FAIL,
+                'data' => $data,
+                'parent_id' => $processId,
+            ]);
 
-        return Arr::get(json_decode($response->getBody()->getContents(), true), 'data.uuid');
+            return $process->id;
+        }
+
+        return Arr::get($this->request('POST', sprintf('process/%s/fail', $processId), $data), 'uuid');
     }
 
-    protected function request(string $method, string $url, array $data)
+    /**
+     * @param string $method
+     * @param string $path
+     * @param array $data
+     * @return array
+     * @throws \GuzzleHttp\Exception\GuzzleException
+     */
+    public function request(string $method, string $path, array $data)
     {
-        return $this->client->request($method, $url, [
+        $response = $this->client->request($method, $this->getBasePath() . $path, [
             'headers' => [
                 'Authorization' => sprintf('Bearer %s', $this->token),
                 'Accept' => 'application/json',
             ],
             'json' => $data,
         ]);
+
+        return json_decode($response->getBody()->getContents(), true)['data'];
     }
 }

@@ -3,16 +3,10 @@
 namespace Modstore\Cronski\Tests\Listeners;
 
 use Modstore\Cronski\Listeners\EventSubscriber;
-use Orchestra\Testbench\TestCase;
-use Modstore\Cronski\CronskiServiceProvider;
+use Modstore\Cronski\Tests\TestCase;
 
 class EventSubscriberTest extends TestCase
 {
-    protected function getPackageProviders($app)
-    {
-        return [CronskiServiceProvider::class];
-    }
-
     public function shouldHandleDataProvider()
     {
         return [

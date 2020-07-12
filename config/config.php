@@ -8,7 +8,9 @@ return [
     'project' => env('CRONSKI_PROJECT'),
     'url' => env('CRONSKI_URL', 'https://cronski.com'),
 
-    'queue' => false, // To add all items to a queue. Might have to specify the queue here too.
+    // Rather than sending the request straight away, this can be enabled to store the data in the db and send the
+    // Request data in batches. This is recommended for sites that have lots of jobs/commands.
+    'scheduled' => env('CRONSKI_SCHEDULED', false),
 
     'commands' => [
         'enabled' => true, // Can be false to not handle commands at all.

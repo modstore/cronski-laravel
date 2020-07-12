@@ -14,7 +14,7 @@ class EventSubscriber
 {
     protected $cronski;
 
-    protected static $processUuids = [];
+    protected static $processIds = [];
 
     public function __construct(Cronski $cronski)
     {
@@ -68,7 +68,7 @@ class EventSubscriber
 
         $lookupKey = $this->getCommandKey((string) $event->input);
 
-        self::$processUuids[$lookupKey] = $this->cronski->start([
+        self::$processIds[$lookupKey] = $this->cronski->start([
             'key' => $event->command,
             'type' => Cronski::TYPE_COMMAND,
             'start_data' => [
@@ -85,8 +85,8 @@ class EventSubscriber
 
         $lookupKey = $this->getCommandKey((string) $event->input);
 
-        $this->cronski->finish(self::$processUuids[$lookupKey]);
-        unset(self::$processUuids[$lookupKey]);
+        $this->cronski->finish(self::$processIds[$lookupKey]);
+        unset(self::$processIds[$lookupKey]);
     }
 
     /**
@@ -137,8 +137,10 @@ class EventSubscriber
         $resolvedJob = unserialize($event->job->payload()['data']['command']);
         $lookupKey = $this->getJobKey($resolvedJob);
 
-        self::$processUuids[$lookupKey] = $this->cronski->start([
-            'key' => $event->job->resolveName(),
+        self::$processIds[$lookupKey] = $this->cronski->start([
+            'key' => method_exists($resolvedJob, 'displayName')
+                ? $resolvedJob->displayName()
+                : $event->job->resolveName(),
             'type' => Cronski::TYPE_JOB,
             'start_data' => (array) $resolvedJob,
             'tags' => $resolvedJob->tags(),
@@ -154,8 +156,8 @@ class EventSubscriber
         $resolvedJob = unserialize($event->job->payload()['data']['command']);
         $lookupKey = $this->getJobKey($resolvedJob);
 
-        $this->cronski->finish(self::$processUuids[$lookupKey]);
-        unset(self::$processUuids[$lookupKey]);
+        $this->cronski->finish(self::$processIds[$lookupKey]);
+        unset(self::$processIds[$lookupKey]);
     }
 
     public function handleJobFailed(JobFailed $event)
@@ -167,8 +169,8 @@ class EventSubscriber
         $resolvedJob = unserialize($event->job->payload()['data']['command']);
         $lookupKey = $this->getJobKey($resolvedJob);
 
-        $this->cronski->fail(self::$processUuids[$lookupKey], $event->exception->getMessage());
-        unset(self::$processUuids[$lookupKey]);
+        $this->cronski->fail(self::$processIds[$lookupKey], $event->exception->getMessage());
+        unset(self::$processIds[$lookupKey]);
     }
 
     /**
