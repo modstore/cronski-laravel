@@ -98,6 +98,16 @@ class EventSubscriber
      */
     public function shouldHandle(string $name, array $config)
     {
+        // Some commands that are always ignored.
+        if (in_array($name, [
+            'cronski:send-pending-requests',
+            'config:clear',
+            'migrate',
+            'package:discover',
+        ])) {
+            return false;
+        }
+
         // No restriction.
         if (count(Arr::get($config, 'excluded', [])) === 0 && count(Arr::get($config, 'included', [])) === 0) {
             return true;

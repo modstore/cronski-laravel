@@ -13,7 +13,7 @@ return [
     'scheduled' => env('CRONSKI_SCHEDULED', false),
 
     'commands' => [
-        'enabled' => true, // Can be false to not handle commands at all.
+        'enabled' => env('CRONSKI_COMMANDS_ENABLED', false), // Can be false to not handle commands at all.
         // Eg. app:my-command, app:*.
         // You can use either "excluded" or "included" not both.
         'excluded' => [
@@ -25,7 +25,7 @@ return [
     ],
 
     'jobs' => [
-        'enabled' => true, // Can be false to not handle jobs at all.
+        'enabled' => env('CRONSKI_JOBS_ENABLED', true), // Can be false to not handle jobs at all.
         // Eg. App\Jobs\MyJob, App\Jobs\*.
         // You can use either "excluded" or "included" not both.
         'excluded' => [
