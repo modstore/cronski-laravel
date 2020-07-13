@@ -73,13 +73,17 @@ class SendPendingRequestsCommand extends Command
                         ]);
                     }
                 });
+
+                $this->line(sprintf('Sent %d "start" batch', count($data)));
             });
 
         // Process "finish".
         Process::with('parentProcess')
             ->where('endpoint', Process::ENDPOINT_FINISH)
             ->whereNull('status')
-            ->whereHas('parentProcess')
+            ->whereHas('parentProcess', function ($query) {
+                return $query->whereNotNull('process_uuid');
+            })
             ->orderBy('id')
             ->chunk(self::MAX_ITEMS, function (Collection $processes) use ($cronski) {
                 $data = $cronski->request('POST', sprintf('process-multi/finish'), [
@@ -95,13 +99,17 @@ class SendPendingRequestsCommand extends Command
                 Process::whereIn('id', collect($data)->pluck('reference'))->update([
                     'status' => Process::STATUS_COMPLETE,
                 ]);
+
+                $this->line(sprintf('Sent %d "finish" batch', count($data)));
             });
 
         // Process "fail".
         Process::with('parentProcess')
             ->where('endpoint', Process::ENDPOINT_FAIL)
             ->whereNull('status')
-            ->whereHas('parentProcess')
+            ->whereHas('parentProcess', function ($query) {
+                return $query->whereNotNull('process_uuid');
+            })
             ->orderBy('id')
             ->chunk(self::MAX_ITEMS, function (Collection $processes) use ($cronski) {
                 $data = $cronski->request('POST', sprintf('process-multi/fail'), [
@@ -117,6 +125,8 @@ class SendPendingRequestsCommand extends Command
                 Process::whereIn('id', collect($data)->pluck('reference'))->update([
                     'status' => Process::STATUS_COMPLETE,
                 ]);
+
+                $this->line(sprintf('Sent %d "fail" batch', count($data)));
             });
 
         // Delete data older than 24 hours.
