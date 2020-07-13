@@ -68,13 +68,20 @@ class EventSubscriber
 
         $lookupKey = $this->getCommandKey((string) $event->input);
 
-        self::$processIds[$lookupKey] = $this->cronski->start([
-            'key' => $event->command,
-            'type' => Cronski::TYPE_COMMAND,
-            'start_data' => [
-                'input' => (string) $event->input,
-            ],
-        ]);
+        // In case there's any error sending this through, report the exception but don't stop execution.
+        try {
+            self::$processIds[$lookupKey] = $this->cronski->start([
+                'key' => $event->command,
+                'type' => Cronski::TYPE_COMMAND,
+                'start_data' => [
+                    'input' => (string) $event->input,
+                ],
+            ]);
+        } catch (\Exception $e) {
+            report($e);
+
+            return;
+        }
     }
 
     public function handleCommandFinished(CommandFinished $event)
@@ -85,7 +92,15 @@ class EventSubscriber
 
         $lookupKey = $this->getCommandKey((string) $event->input);
 
-        $this->cronski->finish(self::$processIds[$lookupKey]);
+        // In case there's any error sending this through, report the exception but don't stop execution.
+        try {
+            $this->cronski->finish(self::$processIds[$lookupKey]);
+        } catch (\Exception $e) {
+            report($e);
+
+            return;
+        }
+
         unset(self::$processIds[$lookupKey]);
     }
 
@@ -147,14 +162,21 @@ class EventSubscriber
         $resolvedJob = unserialize($event->job->payload()['data']['command']);
         $lookupKey = $this->getJobKey($resolvedJob);
 
-        self::$processIds[$lookupKey] = $this->cronski->start([
-            'key' => method_exists($resolvedJob, 'displayName')
-                ? $resolvedJob->displayName()
-                : $event->job->resolveName(),
-            'type' => Cronski::TYPE_JOB,
-            'start_data' => (array) $resolvedJob,
-            'tags' => $resolvedJob->tags(),
-        ]);
+        // In case there's any error sending this through, report the exception but don't stop execution.
+        try {
+            self::$processIds[$lookupKey] = $this->cronski->start([
+                'key' => method_exists($resolvedJob, 'displayName')
+                    ? $resolvedJob->displayName()
+                    : $event->job->resolveName(),
+                'type' => Cronski::TYPE_JOB,
+                'start_data' => (array) $resolvedJob,
+                'tags' => $resolvedJob->tags(),
+            ]);
+        } catch (\Exception $e) {
+            report($e);
+
+            return;
+        }
     }
 
     public function handleJobProcessed(JobProcessed $event)
@@ -166,7 +188,15 @@ class EventSubscriber
         $resolvedJob = unserialize($event->job->payload()['data']['command']);
         $lookupKey = $this->getJobKey($resolvedJob);
 
-        $this->cronski->finish(self::$processIds[$lookupKey]);
+        // In case there's any error sending this through, report the exception but don't stop execution.
+        try {
+            $this->cronski->finish(self::$processIds[$lookupKey]);
+        } catch (\Exception $e) {
+            report($e);
+
+            return;
+        }
+
         unset(self::$processIds[$lookupKey]);
     }
 
@@ -179,7 +209,15 @@ class EventSubscriber
         $resolvedJob = unserialize($event->job->payload()['data']['command']);
         $lookupKey = $this->getJobKey($resolvedJob);
 
-        $this->cronski->fail(self::$processIds[$lookupKey], $event->exception->getMessage());
+        // In case there's any error sending this through, report the exception but don't stop execution.
+        try {
+            $this->cronski->fail(self::$processIds[$lookupKey], $event->exception->getMessage());
+        } catch (\Exception $e) {
+            report($e);
+
+            return;
+        }
+
         unset(self::$processIds[$lookupKey]);
     }
 

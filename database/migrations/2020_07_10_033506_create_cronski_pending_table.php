@@ -22,13 +22,15 @@ class CreateCronskiPendingTable extends Migration
             // Eg. "start", "finish", "failed".
             $table->string('endpoint', 6);
             $table->json('data');
+            $table->tinyInteger('status')->nullable();
             $table->timestamps();
 
             $table->foreign('parent_id')->references('id')->on('cronski_processes')
                 ->onUpdate('cascade')->onDelete('set null');
 
-            $table->index(['endpoint']);
+            $table->index(['endpoint', 'status']);
             $table->index(['parent_id']);
+            $table->index(['status', 'created_at']);
         });
     }
 

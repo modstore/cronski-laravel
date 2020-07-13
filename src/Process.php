@@ -10,6 +10,8 @@ class Process extends Model
     const ENDPOINT_FAIL = 'fail';
     const ENDPOINT_FINISH = 'finish';
 
+    const STATUS_COMPLETE = 1;
+
     protected $table = 'cronski_processes';
 
     protected $guarded = [];
@@ -17,4 +19,9 @@ class Process extends Model
     protected $casts = [
         'data' => 'array',
     ];
+
+    public function parentProcess()
+    {
+        return $this->belongsTo(Process::class, 'parent_id');
+    }
 }

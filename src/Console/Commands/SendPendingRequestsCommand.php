@@ -2,6 +2,7 @@
 
 namespace Modstore\Cronski\Console\Commands;
 
+use Carbon\Carbon;
 use Illuminate\Console\Command;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Support\Facades\DB;
@@ -40,7 +41,7 @@ class SendPendingRequestsCommand extends Command
             return 1;
         }
 
-        $total = Process::count();
+        $total = Process::whereNull('status')->count();
 
         $this->line(sprintf('<info>%d</info> rows to process.', $total));
 
@@ -50,6 +51,7 @@ class SendPendingRequestsCommand extends Command
 
         // Process "start".
         Process::where('endpoint', Process::ENDPOINT_START)
+            ->whereNull('status')
             ->orderBy('id')
             ->chunk(self::MAX_ITEMS, function (Collection $processes) use ($cronski) {
                 $data = $cronski->request('POST', sprintf('process-multi/start'), [
@@ -58,51 +60,69 @@ class SendPendingRequestsCommand extends Command
                     })->toArray(),
                 ]);
 
-                DB::transaction(function () use ($data) {
-                    foreach ($data as $newProcess) {
-                        // Set the new uuid against any processes that have this process referenced as a parent_id.
-                        Process::where('parent_id', $newProcess['reference'])
-                            ->update(['process_uuid' => $newProcess['uuid']]);
-                    }
+                $processes = $processes->keyBy('id');
 
-                    // Delete the successful rows.
-                    Process::whereIn('id', collect($data)->pluck('reference'))->delete();
+                DB::transaction(function () use ($processes, $data) {
+                    // Save the process_uuid against all the completed processes, so the "finish/fail" can get it.
+                    foreach ($data as $newProcess) {
+                        /** @var Process $process */
+                        $process = $processes->get($newProcess['reference']);
+                        $process->update([
+                            'status' => Process::STATUS_COMPLETE,
+                            'process_uuid' => $newProcess['uuid'],
+                        ]);
+                    }
                 });
             });
 
         // Process "finish".
-        Process::where('endpoint', Process::ENDPOINT_FINISH)
+        Process::with('parentProcess')
+            ->where('endpoint', Process::ENDPOINT_FINISH)
+            ->whereNull('status')
+            ->whereHas('parentProcess')
             ->orderBy('id')
             ->chunk(self::MAX_ITEMS, function (Collection $processes) use ($cronski) {
                 $data = $cronski->request('POST', sprintf('process-multi/finish'), [
                     'items' => $processes->map(function (Process $process) {
                         return array_merge($process->data, [
-                            'process_uuid' => $process->process_uuid,
+                            'process_uuid' => $process->parentProcess->process_uuid,
                             'reference' => $process->id,
                         ]);
                     })->toArray(),
                 ]);
 
-                // Delete the successful rows.
-                Process::whereIn('id', collect($data)->pluck('reference'))->delete();
+                // Update the status for the completed processes.
+                Process::whereIn('id', collect($data)->pluck('reference'))->update([
+                    'status' => Process::STATUS_COMPLETE,
+                ]);
             });
 
         // Process "fail".
-        Process::where('endpoint', Process::ENDPOINT_FAIL)
+        Process::with('parentProcess')
+            ->where('endpoint', Process::ENDPOINT_FAIL)
+            ->whereNull('status')
+            ->whereHas('parentProcess')
             ->orderBy('id')
             ->chunk(self::MAX_ITEMS, function (Collection $processes) use ($cronski) {
                 $data = $cronski->request('POST', sprintf('process-multi/fail'), [
                     'items' => $processes->map(function (Process $process) {
                         return array_merge($process->data, [
-                            'process_uuid' => $process->process_uuid,
+                            'process_uuid' => $process->parentProcess->process_uuid,
                             'reference' => $process->id,
                         ]);
                     })->toArray(),
                 ]);
 
-                // Delete the successful rows.
-                Process::whereIn('id', collect($data)->pluck('reference'))->delete();
+                // Update the status for the completed processes.
+                Process::whereIn('id', collect($data)->pluck('reference'))->update([
+                    'status' => Process::STATUS_COMPLETE,
+                ]);
             });
+
+        // Delete data older than 24 hours.
+        Process::where('status', Process::STATUS_COMPLETE)
+            ->where('created_at', '<', Carbon::now()->subDay())
+            ->delete();
 
         return 0;
     }

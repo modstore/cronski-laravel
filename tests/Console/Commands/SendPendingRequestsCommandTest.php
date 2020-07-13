@@ -72,7 +72,7 @@ class SendPendingRequestsCommandTest extends TestCase
 
         Artisan::call('cronski:send-pending-requests');
 
-        // Ensure all rows are deleted now they've been processed.
-        $this->assertSame(0, Process::count());
+        // Ensure all rows are the correct status now they've been processed.
+        $this->assertSame(3, Process::where('status', Process::STATUS_COMPLETE)->count());
     }
 }
