@@ -170,7 +170,9 @@ class EventSubscriber
                     : $event->job->resolveName(),
                 'type' => Cronski::TYPE_JOB,
                 'start_data' => (array) $resolvedJob,
-                'tags' => $resolvedJob->tags(),
+                'tags' => method_exists($resolvedJob, 'tags')
+                    ? $resolvedJob->tags()
+                    : [],
             ]);
         } catch (\Exception $e) {
             report($e);

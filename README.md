@@ -23,7 +23,7 @@ If you set scheduled = true in the config, add the following scheduled command t
 Once you've enabled this option, you will need to run the migration to create the table for storing the pending requests.
 ``` php
 // Send pending Cronski requests. You can reduce the frequency of this command to whatever suits.
-$schedule->command('cronski:send-pending-requests')->everyMinute();
+$schedule->command('cronski:send-pending-requests')->everyMinute()->withoutOverlapping();
 ```
 
 ### Testing
