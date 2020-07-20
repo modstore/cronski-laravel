@@ -35,10 +35,8 @@ class SendPendingRequestsCommand extends Command
      */
     public function handle(Cronski $cronski)
     {
-        if (!config('cronski.scheduled')) {
-            $this->error('You must set "scheduled" to true in the cronski config to use this command.');
-
-            return 1;
+        if (!config('cronski.project') || !config('cronski.scheduled')) {
+            throw new \Exception('You must have your project uuid set and "scheduled" set to true in the cronski config to use this command.');
         }
 
         $total = Process::whereNull('status')->count();

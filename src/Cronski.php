@@ -84,7 +84,7 @@ class Cronski
             // Send through the start time so there's no delay due to request time.
             'finished_at' => Carbon::now()->toIso8601ZuluString(),
             // Send through the memory usage in mb.
-            'memory' => memory_get_usage(true) / 1024 / 1024,
+            'memory' => round(memory_get_usage(true) / 1024 / 1024),
         ], $data);
 
         // If scheduled, create the record locally only, don't send a request now.
@@ -114,7 +114,7 @@ class Cronski
             // Send through the start time so there's no delay due to request time.
             'finished_at' => Carbon::now()->toIso8601ZuluString(),
             // Send through the memory usage in mb.
-            'memory' => memory_get_usage(true) / 1024 / 1024,
+            'memory' => round(memory_get_usage(true) / 1024 / 1024),
             'failed_message' => $message,
         ], $data);
 
