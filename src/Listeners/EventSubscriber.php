@@ -4,6 +4,7 @@ namespace Modstore\Cronski\Listeners;
 
 use Illuminate\Console\Events\CommandFinished;
 use Illuminate\Console\Events\CommandStarting;
+use Illuminate\Contracts\Queue\Job;
 use Illuminate\Queue\Events\JobFailed;
 use Illuminate\Queue\Events\JobProcessed;
 use Illuminate\Queue\Events\JobProcessing;
@@ -160,7 +161,7 @@ class EventSubscriber
         }
 
         $resolvedJob = unserialize($event->job->payload()['data']['command']);
-        $lookupKey = $this->getJobKey($resolvedJob);
+        $lookupKey = $this->getJobKey($event->job, $resolvedJob);
 
         // In case there's any error sending this through, report the exception but don't stop execution.
         try {
@@ -188,7 +189,7 @@ class EventSubscriber
         }
 
         $resolvedJob = unserialize($event->job->payload()['data']['command']);
-        $lookupKey = $this->getJobKey($resolvedJob);
+        $lookupKey = $this->getJobKey($event->job, $resolvedJob);
 
         // In case there's any error sending this through, report the exception but don't stop execution.
         try {
@@ -209,7 +210,7 @@ class EventSubscriber
         }
 
         $resolvedJob = unserialize($event->job->payload()['data']['command']);
-        $lookupKey = $this->getJobKey($resolvedJob);
+        $lookupKey = $this->getJobKey($event->job, $resolvedJob);
 
         // In case there's any error sending this through, report the exception but don't stop execution.
         try {
@@ -237,11 +238,18 @@ class EventSubscriber
     /**
      * Get a key for storing a reference to this job instance locally.
      *
-     * @param $job
+     * @param Job $job
+     * @param $resolvedJob
      * @return string
      */
-    protected function getJobKey($job)
+    protected function getJobKey(Job $job, $resolvedJob)
     {
-        return md5(json_encode((array) $job));
+        // Real queued jobs will have a job id.
+        if (!empty($job->getJobId())) {
+            return $job->getJobId();
+        }
+
+        // Sync jobs won't have an id, so need to make a key as best as possible so it works with SyncJob.
+        return md5(json_encode((array) $resolvedJob));
     }
 }
