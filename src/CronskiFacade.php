@@ -16,6 +16,6 @@ class CronskiFacade extends Facade
      */
     protected static function getFacadeAccessor()
     {
-        return 'cronski';
+        return Cronski::class;
     }
 }
