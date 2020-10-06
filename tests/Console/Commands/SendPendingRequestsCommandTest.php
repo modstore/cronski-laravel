@@ -2,6 +2,7 @@
 
 namespace Modstore\Cronski\Tests\Console\Commands;
 
+use Config;
 use GuzzleHttp\Client;
 use GuzzleHttp\Psr7\Response;
 use Illuminate\Support\Facades\Artisan;
@@ -15,6 +16,8 @@ class SendPendingRequestsCommandTest extends TestCase
 {
     public function testProcessPending()
     {
+        Config::set('cronski.project', 'test');
+
         $startProcess = Process::create([
             'endpoint' => Process::ENDPOINT_START,
             'data' => [

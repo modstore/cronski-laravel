@@ -2,6 +2,7 @@
 
 namespace Modstore\Cronski;
 
+use Cache;
 use Carbon\Carbon;
 use GuzzleHttp\ClientInterface;
 use Illuminate\Support\Arr;
@@ -150,5 +151,34 @@ class Cronski
         ]);
 
         return json_decode($response->getBody()->getContents(), true)['data'];
+    }
+
+    /**
+     * Store the process ids so they can be retrieved when error reporting etc.
+     * @param array $processIds
+     */
+    public function setProcessIds(array $processIds)
+    {
+        Cache::forever('cronski.process_ids', $processIds);
+    }
+
+    /**
+     * Get any active process ids, so they can be sent through to error reporting etc.
+     * @return array
+     */
+    public function getProcessIds()
+    {
+        return Cache::get('cronski.process_ids', []);
+    }
+
+    /**
+     * Get the urls for any active processes.
+     * @return \Illuminate\Support\Collection
+     */
+    public function getProcessUrls()
+    {
+        return collect(Cache::get('cronski.process_ids', []))->map(function ($processId) {
+            return sprinf('https://cronski.com/go/process/%s', $processId);
+        });
     }
 }

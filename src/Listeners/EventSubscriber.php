@@ -83,6 +83,8 @@ class EventSubscriber
 
             return;
         }
+
+        $this->cronski->setProcessIds(self::$processIds);
     }
 
     public function handleCommandFinished(CommandFinished $event)
@@ -103,6 +105,7 @@ class EventSubscriber
         }
 
         unset(self::$processIds[$lookupKey]);
+        $this->cronski->setProcessIds(self::$processIds);
     }
 
     /**
@@ -180,6 +183,8 @@ class EventSubscriber
 
             return;
         }
+
+        $this->cronski->setProcessIds(self::$processIds);
     }
 
     public function handleJobProcessed(JobProcessed $event)
@@ -201,6 +206,7 @@ class EventSubscriber
         }
 
         unset(self::$processIds[$lookupKey]);
+        $this->cronski->setProcessIds(self::$processIds);
     }
 
     public function handleJobFailed(JobFailed $event)
@@ -222,6 +228,7 @@ class EventSubscriber
         }
 
         unset(self::$processIds[$lookupKey]);
+        $this->cronski->setProcessIds(self::$processIds);
     }
 
     /**
